@@ -100,25 +100,11 @@ module Terjira
     end
 
     def select_priority
-      fetch(:priority) do
-        priorities = fetch(:priorities) { Terjira::Client::Priority.all }
-        option_prompt.select('Choose priority?') do |menu|
-          priorities.each do |priority|
-            menu.choice priority.name, priority
-          end
-        end
-      end
+      selectable_option(:priority)
     end
 
     def select_resolution
-      fetch(:resolution) do
-        resolutions = fetch(:resolutions) { Terjira::Client::Resolution.all }
-        option_prompt.select('Choose resolution?') do |menu|
-          resolutions.each do |resolution|
-            menu.choice resolution.name, resolution
-          end
-        end
-      end
+      selectable_option(:resolution)
     end
 
     def write_epiclink_key
@@ -173,6 +159,19 @@ module Terjira
 
     def option_prompt
       @option_prompt ||= TTY::Prompt.new
+    end
+
+    def selectable_option(option_name)
+      fetch(option_name.to_sym) do
+        collection = fetch(option_name.to_s.pluralize.to_sym) do
+          eval("Terjira::Client::#{option_name.capitalize}").all
+        end
+        option_prompt.select("Choose #{option_name}?") do |menu|
+          collection.each do |opt|
+            menu.choice opt.name, opt
+          end
+        end
+      end
     end
   end
 end

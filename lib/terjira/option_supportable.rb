@@ -39,16 +39,47 @@ module Terjira
         end
       end
 
-      # Store assigned options
-      origin.reject { |k, v| k.to_s.casecmp(v.to_s).zero? }.each do |k, v|
-        resource_store.set(k.to_sym, v)
-      end
+      store_options(origin, opts)
 
-      # Store given options from arguments
-      (opts[:resources] || {}).each do |k, v|
-        resource_store.set(k.to_sym, v)
-      end
+      default_value_options = build_default_options(origin)
 
+      origin.merge! default_value_options
+    end
+
+    def suggest_related_value_options(opts = {})
+      build_options_for_issuetype(opts) if opts[:issuetype]
+      build_options_for_epiclink(opts) if opts[:epiclink]
+      opts
+    end
+
+    def resource_store
+      ResourceStore.instance
+    end
+
+    private
+
+    def build_options_for_issuetype(opts)
+      if opts[:issuetype].key_value.casecmp('epic').zero?
+        # Suggest epic name
+        epic_name_field = Client::Field.epic_name
+        opts[epic_name_field.key] ||= write_epic_name
+      else
+        subtask_issuetypes = Client::Issuetype.subtask_issuetypes.map(&:name)
+        if subtask_issuetypes.include? opts[:issuetype].key_value
+          # Suggest parent issue
+          opts[:parent] ||= write_parent_issue_key
+        end
+      end
+      opts
+    end
+
+    def build_options_for_epiclink(opts)
+      epiclink_field = Client::Field.epiclink
+      opts[epiclink_field.key] ||= opts.delete(:epiclink)
+      opts
+    end
+
+    def build_default_options(origin)
       # Select options that are not assigned value from user
       default_value_options = origin.select do |k, v|
         k.to_s.casecmp(v.to_s).zero?
@@ -71,34 +102,19 @@ module Terjira
         default_value_options[k] = resource_store.get(k)
       end
 
-      origin.merge! default_value_options
+      default_value_options
     end
 
-    def suggest_related_value_options(opts = {})
-      if opts[:issuetype]
-        if opts[:issuetype].key_value.casecmp('epic').zero?
-          # Suggest epic name
-          epic_name_field = Client::Field.epic_name
-          opts[epic_name_field.key] ||= write_epic_name
-        else
-          subtask_issuetypes = Client::Issuetype.subtask_issuetypes.map(&:name)
-          if subtask_issuetypes.include? opts[:issuetype].key_value
-            # Suggest parent issue
-            opts[:parent] ||= write_parent_issue_key
-          end
-        end
+    def store_options(origin, opts)
+      # Store assigned options
+      origin.reject { |k, v| k.to_s.casecmp(v.to_s).zero? }.each do |k, v|
+        resource_store.set(k.to_sym, v)
       end
 
-      if opts[:epiclink]
-        epiclink_field = Client::Field.epiclink
-        opts[epiclink_field.key] ||= opts.delete(:epiclink)
+      # Store given options from arguments
+      (opts[:resources] || {}).each do |k, v|
+        resource_store.set(k.to_sym, v)
       end
-
-      opts
-    end
-
-    def resource_store
-      ResourceStore.instance
     end
   end
 end

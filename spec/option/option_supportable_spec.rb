@@ -33,7 +33,7 @@ describe Terjira::OptionSupportable do
       prompt.input.rewind
     end
 
-    it 'suggests proejcts' do
+    it 'suggests projects' do
       allow(Terjira::Client::Project).to receive(:all).and_return(projects)
 
       subject.options = { 'project' => 'project' }
@@ -51,7 +51,7 @@ describe Terjira::OptionSupportable do
       expect(resource_store).to be_exists(:board)
     end
 
-    it 'suggeset sprints' do
+    it 'suggests sprints' do
       allow(Terjira::Client::Sprint).to receive(:all).and_return(sprints)
 
       subject.options = { 'sprint' => 'sprint' }
